@@ -24,7 +24,6 @@ This project implements the A* algorithm to navigate a differential drive robot 
 ## Project Folder Structure
 
    proj3p2_anirudh#1_pranav#2_munyaradzi#3/     
-   
    ├── Part01
    │   ├── a_star_2d.py          # Python code for A* algorithm in 2D
    │   └── map.py                # Map generation and obstacle handling (if any)
