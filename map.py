@@ -359,14 +359,14 @@ def sharp_right_slow(node):
     v1=0 #right
     v2=RPM1 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history] 
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs] 
 
     return new_node
 
@@ -374,14 +374,14 @@ def sharp_left_slow(node):
     v1=RPM1 #right
     v2=0 # left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
     
     return new_node
     
@@ -389,14 +389,14 @@ def straight_slow(node):
     v1=RPM1 #right
     v2=RPM1 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
     
     return new_node
 
@@ -404,14 +404,14 @@ def sharper_right(node):
     v1=0 #right
     v2=RPM2 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
 
     return new_node
 
@@ -419,14 +419,14 @@ def sharper_left(node):
     v1=RPM2 #right
     v2=0 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
 
     return new_node
 
@@ -434,14 +434,14 @@ def straight_fast(node):
     v1=RPM2 #right
     v2=RPM2 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy()
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
 
     return new_node
 
@@ -449,14 +449,14 @@ def gradual_right(node):
     v1=RPM1 #right
     v2=RPM2 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
 
     return new_node
 
@@ -464,14 +464,14 @@ def gradual_left(node):
     v1=RPM2 #right
     v2=RPM1 #left
     (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() # Path for backtracking
-    action_history=node[2].copy() # Recording all previous actions (wrt path) for giving as an input to turtlebot
+    path = node[1].copy() 
+    action_logs=node[2].copy() 
     path.append((x, y, theta))
-    action_history.append((v1,v2))
+    action_logs.append((v1,v2))
     new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_history]
+    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
 
     return new_node
 
