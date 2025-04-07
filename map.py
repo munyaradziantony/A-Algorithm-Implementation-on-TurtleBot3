@@ -342,11 +342,11 @@ def get_x_y_theta(RPM_right,RPM_left,x,y,theta):
     new_y=y
     new_theta=theta    
     count=0   
-    # Looping 100 times at a time step of 0.01 to represent a time of 1 second
+    # Looping 10 times at a time step of 0.1 to represent a time of 1 second
     while count<100:
-        dx=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.cos(math.radians(new_theta))*0.01
-        dy=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.sin(math.radians(new_theta))*0.01
-        dtheta=(wheel_radius/wheel_dist)*(average_velocity_right-average_velocity_left)*0.01
+        dx=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.cos(math.radians(new_theta))*0.1
+        dy=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.sin(math.radians(new_theta))*0.1
+        dtheta=(wheel_radius/wheel_dist)*(average_velocity_right-average_velocity_left)*0.1
         new_x=new_x+dx
         new_y=new_y+dy
         new_theta=new_theta+math.degrees(dtheta)
