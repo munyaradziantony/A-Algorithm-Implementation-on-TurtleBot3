@@ -100,10 +100,16 @@ def update_map(map):
     for x in range(WIDTH):
         for y in range(HEIGHT):
             if is_inside_obstacle(x, y):
-                map[y, x] = SILVER_GRAY  # Assign SILVER_GRAY for obstacles
+                map[y, x] = BLACK  # Assign SILVER_GRAY for obstacles
             elif is_inside_buffer(x, y):
                 map[y, x] = NEON_GREEN  # Assign NEON_GREEN for clearance
-            
+
+def draw_start_point(canvas, x, y):
+    cv2.circle(canvas, (x, y), 10, (0,0,255), 10)
+
+def draw_end_point(canvas, x, y):
+    cv2.circle(canvas, (x, y), 10, (255,0,0), 10)
+    
 # Function to resize and display the map
 def display_resized_map(map):
     small_map = cv2.resize(map, (WIDTH // SCALE, HEIGHT // SCALE), interpolation=cv2.INTER_AREA)
@@ -121,7 +127,7 @@ def get_start_position():
     while True:
         try:
             x_s = int(input(f"Enter start x (0 to {WIDTH - 1}): "))
-            y_s = int(input(f"Enter start y (0 to {HEIGHT - 1}): "))
+            y_s = HEIGHT - int(input(f"Enter start y (0 to {HEIGHT - 1}): "))
 
             if not (0 <= x_s < WIDTH and 0 <= y_s < HEIGHT):
                 print("Coordinates are out of bounds.")
@@ -162,7 +168,7 @@ def get_goal_position():
     while True:
         try:
             x_g = int(input(f"Enter goal x (0 to {WIDTH - 1}): "))
-            y_g = int(input(f"Enter goal y (0 to {HEIGHT - 1}): "))
+            y_g = HEIGHT - int(input(f"Enter goal y (0 to {HEIGHT - 1}): "))
 
             if not (0 <= x_g < WIDTH and 0 <= y_g < HEIGHT):
                 print("Coordinates are out of bounds.")
@@ -187,10 +193,10 @@ def get_wheel_rpms():
             RPM1 = float(input("Enter RPM1 (must be > 0): "))
             RPM2 = float(input("Enter RPM2 (must be > 0): "))
 
-            if RPM1 > 0 and RPM2 > 0:
+            if RPM1 >= 0 or RPM2 >= 0:
                 return (RPM1, RPM2)
             else:
-                print("Both RPM values must be greater than 0.")
+                print("Both RPM values cannot be 0 or negative")
 
         except ValueError:
             print("Invalid input. Please enter numeric values for RPMs.")
@@ -305,13 +311,13 @@ class GoalPt:
         self.radius = radius
 
  #==========================================================================================
-initial_x = x_s
-initial_y =y_s
-goal_node = 0
-initial_theta = theta_s
-RPM1 = 0
-RPM2 = 0 
-
+initial_x = 300.0
+initial_y = 300.0
+goal_node = 0,0
+initial_theta = 0.0
+RPM1 = 100
+RPM2 = 100
+0
 # Cost to come using Euclidean distance
 def get_c2c(x,y):
     goal_x,goal_y = goal_node
@@ -341,23 +347,21 @@ def get_x_y_theta(RPM_right,RPM_left,x,y,theta):
     new_x=x
     new_y=y
     new_theta=theta    
-    count=0   
+
     # Looping 10 times at a time step of 0.1 to represent a time of 1 second
-    while count<100:
+    for i in range(10):
         dx=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.cos(math.radians(new_theta))*0.1
         dy=(wheel_radius/2)*(average_velocity_right+average_velocity_left)*math.sin(math.radians(new_theta))*0.1
         dtheta=(wheel_radius/wheel_dist)*(average_velocity_right-average_velocity_left)*0.1
         new_x=new_x+dx
         new_y=new_y+dy
         new_theta=new_theta+math.degrees(dtheta)
-        count=count+1
     return new_x,new_y,new_theta
 
 # Defining set of actions based on wheel velocities / RPMs
 # turn right
-def sharp_right_slow(node):
-    v1=0 #right
-    v2=RPM1 #left
+
+def action(node,v1,v2):
     (x,y,theta,c2c,_)=node[0]
     path = node[1].copy() 
     action_logs=node[2].copy() 
@@ -367,114 +371,31 @@ def sharp_right_slow(node):
     new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
     new_c2c = get_c2c(new_x,new_y)
     new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs] 
-
     return new_node
 
-def sharp_left_slow(node):
-    v1=RPM1 #right
-    v2=0 # left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
-    
-    return new_node
-    
-def straight_slow(node):
-    v1=RPM1 #right
-    v2=RPM1 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
-    
-    return new_node
+def sharp_right_R1(node):
+    return action(node, 0, RPM1) # Pivoting right by applying RPM1 on the left wheel and 0 on the right wheel
 
-def sharper_right(node):
-    v1=0 #right
-    v2=RPM2 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
+def sharp_left_R1(node):
+    return action(node, RPM1, 0) # Pivoting left by applying 0 on the left wheel and 0 on the right wheel
 
-    return new_node
+def straight_R1(node):
+    return action(node, RPM1, RPM1) # Move straight by applying RPM1 on both wheels
 
-def sharper_left(node):
-    v1=RPM2 #right
-    v2=0 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
+def sharp_right_R2(node):
+    return action(node, 0, RPM2) # Pivoting right by applying RPM2 on the left wheel and 0 on the right wheel
 
-    return new_node
+def sharp_left_R2(node):
+    return action(node, RPM2, 0) # Pivoting left by applying 0 on the left wheel and 0 on the right wheel
 
-def straight_fast(node):
-    v1=RPM2 #right
-    v2=RPM2 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy()
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
+def straight_R2(node):
+    return action(node, RPM2, RPM2) # Move straight by applying RPM2 on both wheels
 
-    return new_node
+def gradual_turn_R1R2(node):
+    return action(node, RPM1, RPM2) # Turn by applying RPM1 on right wheel and RPM2 on left wheel
 
-def gradual_right(node):
-    v1=RPM1 #right
-    v2=RPM2 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
-
-    return new_node
-
-def gradual_left(node):
-    v1=RPM2 #right
-    v2=RPM1 #left
-    (x,y,theta,c2c,_)=node[0]
-    path = node[1].copy() 
-    action_logs=node[2].copy() 
-    path.append((x, y, theta))
-    action_logs.append((v1,v2))
-    new_x,new_y,new_theta=get_x_y_theta(v1,v2,x,y,theta)
-    new_c2c = c2c + math.sqrt(((x-new_x)**2)+((y-new_y)**2))
-    new_c2c = get_c2c(new_x,new_y)
-    new_node=[(new_x,new_y,new_theta,new_c2c,new_c2c),path,action_logs]
-
-    return new_node
-
+def gradual_turn_R2R1(node):
+    return action(node, RPM2, RPM1) # Turn by applying RPM1 on left wheel and RPM2 on right wheel 
 
 
 # Main function to run the program
@@ -492,6 +413,9 @@ def main():
     start_orientation = get_valid_start_orientation()
     goal_position = get_goal_position()
     rpm1, rpm2 = get_wheel_rpms()
+
+    draw_start_point(map, start_position[0], start_position[1])
+    draw_end_point(map, goal_position[0], goal_position[1])
 
     print(f"Start position: {start_position}")
     print(f"Start orientation: {start_orientation}°")
