@@ -1,44 +1,28 @@
 # ENPM 661: Path Planning for Autonomous Robots
 ### Instructions for Project3- Phase2
 
+Forked from template which has been modified as per requirements- https://github.com/koustubh1012/turtlebot3_project3 
+
 ## Map Dimensions
 
 All dimensions are in milimeters.
 
 ![map](map.png)
 
-## Setup
+## How to run
 
-Create a workpace
-
+Package can either be copied in the src of workspace or a symbolic link can be created.
 ```sh
-mkdir -p project3_ws/src
-cd ~/project3_ws/src
-```
-
-Clone the reposiory
-
-```sh
-git clone https://github.com/koustubh1012/turtlebot3_project3.git
-```
-
-Source ROS (Enable ROS commands)
-
-```sh
-source /opt/ros/galactic/setup.bash
-```
-
-Build the workspace
-
-```sh
-cd ~/project3_ws
-colcon build --packages-select turtlebot3_project3
-```
-
-
-Source ROS (Package will be identified)
-
-```sh
+mkdir project3_ws
+cd project3_ws
+git clone git@github.com:munyaradziantony/A-Algorithm-Implementation-on-TurtleBot3.git
+mkdir src
+cp -r A-Algorithm-Implementation-on-TurtleBot3/part2 src/ 
+#or 
+ln -snf $PWD/A-Algorithm-Implementation-on-TurtleBot3/part2 src/pkg
+# To compile
+colcon build --cmake-args -DCMAKE_EXPORT_COMPILE_COMMANDS=ON --event-handlers console_cohesion+
+# Source the package
 source install/setup.bash
 ```
 
