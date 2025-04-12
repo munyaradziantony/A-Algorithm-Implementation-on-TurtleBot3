@@ -26,6 +26,15 @@ from launch.substitutions import LaunchConfiguration
 
 
 def generate_launch_description():
+    # Default setting Model as waffle
+    TB_MODEL = None
+    try:
+        TB_MODEL = os.environ['TURTLEBOT3_MODEL']
+    except KeyError:
+        print("Environment variable 'TURTLEBOT3_MODEL' not set. Using default 'waffle'.")
+    finally:
+        os.environ['TURTLEBOT3_MODEL'] = "waffle"
+        TB_MODEL = "waffle"
     launch_file_dir = os.path.join(get_package_share_directory('turtlebot3_project3'), 'launch')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
 
