@@ -296,6 +296,10 @@ class Point:
         """utility function to print Point directly"""
         return f"Point({self.x}, {self.y}, {self.theta})"
 
+class WayPoint(Point):
+    def __init__(self, x, y, theta, edgecost):
+        super().__init__(x, y, theta)
+        self.edgecost = edgecost
 
 # Node container class
 def principal_theta(theta):
@@ -321,7 +325,7 @@ class Node:
         self.y = y
         self.theta = principal_theta(theta)
         self.c2c = c2c
-        self.waypoints = []
+        self.waypoints = None
         self.total_cost = 0
         self.parent = None
         self.visited = False
@@ -413,7 +417,7 @@ def get_waypoints_cost(node: Node, u_l, u_r):
         x_i += dx
         y_i += dy
         theta_i += dtheta
-        waypoints.append(Point(x_i, y_i, theta_i))
+        waypoints.append(WayPoint(x_i, y_i, theta_i, edgecost))
     return waypoints, edgecost
 
 
@@ -573,6 +577,8 @@ class Search:
 
                 # Check waypoints and endpoint for collisions with the obstacles or the wall
                 collisions = False
+                goalreached = False
+                goalwp:WayPoint = None
                 for wp in waypoints:
                     if (
                         is_inside_buffer(wp.x, wp.y)
@@ -582,8 +588,20 @@ class Search:
                         collisions = True
                         break
 
-                if collisions:
+                    # Not colliding, but check for the cornercase where the waypoint itself is the near the Goal 
+                    if self.reached_goal(wp.x, wp.y, goal):
+                        goalreached = True
+                        goalwp = wp
+                        break
+
+                if collisions:      # One or more waypoints are colliding, so exclude this action and proceed with the next one
                     continue
+
+                if goalreached:
+                    self.nodes_dict["last"] = Node(goalwp.x, goalwp.y, goalwp.theta, 0)
+                    self.search_last_node = node
+                    goal_reached = True
+                    print("Path found!")
 
                 # Check in dictionary if the node exists at the point, else create a new node at the last waypoin
                 next_node = self.nodes_dict.get(
@@ -612,6 +630,7 @@ class Search:
                     self.nodes_dict[
                         Point(next_node.x, next_node.y, next_node.theta)
                     ] = next_node
+                    next_node.waypoints = waypoints
 
         if not goal_reached:
             print("No path found!")
