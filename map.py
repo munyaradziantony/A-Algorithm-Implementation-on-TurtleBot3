@@ -14,6 +14,7 @@ from math import cos
 from math import radians, degrees, sqrt
 from collections import deque
 
+
 # A container to hold multiple time values in key: value pair to be used for analysis at the termination of program
 time_dict = {}
 
@@ -39,6 +40,8 @@ C = 100  # Default
 GOAL_THRESHOLD = 50
 
 TIME_STEP = 0.1
+
+file = open("nodes.txt", "w")
 
 
 def get_clearance():
@@ -113,8 +116,8 @@ def is_inside_buffer(x, y):
 
     x_left_boundary = 0 <= x < BUFFER
     x_right_boundary = WIDTH - BUFFER <= x < WIDTH
-    y_lower_boundary = 0 <= y < BUFFER
-    y_upper_boundary = HEIGHT - BUFFER <= y < HEIGHT
+    y_upper_boundary = 0 <= y < BUFFER
+    y_lower_boundary = HEIGHT - BUFFER <= y < HEIGHT
 
     return any(
         [
@@ -549,7 +552,7 @@ class Search:
             else:
                 time.sleep(0.1)
 
-        plt.io._destroy()
+        plt.ioff()
         plt.close(fig)
 
     def a_star(self, start: Point, goal: GoalPt):
@@ -562,11 +565,15 @@ class Search:
         Returns: Boolean: True is an optimal path is found, False otherwise
         """
         # start_time = time.perf_counter()
+
+        # Create grid of x, y coordinates
         stop_event = threading.Event()
         data_queue = DataQueue()
         self.plotter_thread = threading.Thread(
-            target=self.plotter, args=(data_queue, stop_event)
+            target=self.plotter,
+            args=(data_queue, stop_event),
         )
+        self.plotter_thread.start()
 
         self.search_start = start
         self.search_goal = Point(goal.x, goal.y, 0)
@@ -585,7 +592,6 @@ class Search:
         ]
         print(f"Start:{start_node}")
         print(f"Goal:{goal}")
-        time.sleep(5)
 
         u = Node(start.x, start.y, start.theta, 0)
         heapq.heappush(self.queue, u)
@@ -593,7 +599,6 @@ class Search:
         self.nodes_dict = {Point(u.x, u.y, u.theta): u}
 
         early_exit = False
-        thread_started = False
         try:
             while self.queue:
                 if early_exit:
@@ -608,9 +613,7 @@ class Search:
                     break
 
                 print(f"Exploring node: {node}")
-                if not thread_started:
-                    thread_started = True
-                    self.plotter_thread.start()
+                file.write(f"Exploring node: {node}\n")
 
                 for act_idx, action in enumerate(valid_actions):
                     waypoints, cost = action(node)
@@ -636,7 +639,12 @@ class Search:
                             break
 
                     if is_colliding:
-                        print(f"Collision detected, discarding action {act_idx}")
+                        print(
+                            f"Collision detected while exploring {node}, discarding action {act_idx}"
+                        )
+                        file.write(
+                            f"Collision detected while exploring {node}, discarding action {act_idx}\n"
+                        )
                         continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
 
                     if is_wp_near_goal:
@@ -661,6 +669,7 @@ class Search:
                         ] = wp_goal_node
                         self.search_last_node = wp_goal_node
                         print(f"Goal found near waypoint at {wp_goal_node}")
+                        file.write(f"Goal found near waypoint at {wp_goal_node}\n")
                         early_exit = True
                         goal_reached = True
                         break
@@ -668,9 +677,9 @@ class Search:
                     # Check in dictionary if the node exists at the point, else create a new node at the last waypoin
                     next_node = self.nodes_dict.get(
                         Point(
-                            node.x + waypoints[-1].x,
-                            node.y + waypoints[-1].y,
-                            node.theta + waypoints[-1].theta,
+                            waypoints[-1].x,
+                            waypoints[-1].y,
+                            waypoints[-1].theta,
                         ),
                         Node(
                             waypoints[-1].x,
@@ -693,6 +702,7 @@ class Search:
                         ] = next_node
                         next_node.waypoints = waypoints
                     print(f"New node: {next_node}")
+                    file.write(f"New node: {next_node}\n")
 
         except KeyboardInterrupt:
             pass
@@ -835,7 +845,7 @@ def main():
 
     SCALE = get_scale_factor()
     C = get_clearance()
-    BUFFER = 2 * r + C
+    BUFFER = r + C
 
     print("Creating the map...")
     map = initialize_map()
