@@ -35,7 +35,7 @@ r = 80  # Robot Radius
 R = 25  # Wheel Radius
 L = 160  # Wheel Distance
 C = 100  # Default
-GOAL_THRESHOLD = 1.5
+GOAL_THRESHOLD = 50
 
 TIME_STEP = 0.1
 
@@ -274,9 +274,9 @@ class Point:
         self.theta += dtheta
 
     def __hash__(self):
-        """Quantize x and y to a 0.5 unit grid"""
-        quantized_x = round(self.x * 2) / 2  # Round to nearest 0.5
-        quantized_y = round(self.y * 2) / 2
+        """Quantize x and y to a 1 mm grid"""
+        quantized_x = round(self.x * 2)
+        quantized_y = round(self.y * 2)
         return hash((quantized_x, quantized_y))
 
     def __eq__(self, other):
@@ -296,10 +296,12 @@ class Point:
         """utility function to print Point directly"""
         return f"Point({self.x}, {self.y}, {self.theta})"
 
+
 class WayPoint(Point):
     def __init__(self, x, y, theta, edgecost):
         super().__init__(x, y, theta)
         self.edgecost = edgecost
+
 
 # Node container class
 def principal_theta(theta):
@@ -325,21 +327,17 @@ class Node:
         self.y = y
         self.theta = principal_theta(theta)
         self.c2c = c2c
-        self.waypoints = None
+        self.waypoints: list = None
         self.total_cost = 0
         self.parent = None
         self.visited = False
 
     # used for duplicate key finding in dict
     def __hash__(self):
-        """Quantize x and y to a 0.5 unit grid and multiple of 5 degrees"""
-        quantized_x = round(self.x * 2) / 2  # Round to nearest 0.5
-        quantized_y = round(self.y * 2) / 2
-
-        # Quantize theta to bins of 1 degrees
-        quantized_theta = round(self.theta)
-
-        return hash((quantized_x, quantized_y, quantized_theta))
+        """Quantize x and y to a 1 mm grid """
+        quantized_x = round(self.x * 2) # Round to nearest integer
+        quantized_y = round(self.y * 2)
+        return hash((quantized_x, quantized_y))
 
     def __eq__(self, other):
         """Two nodes are considered equal if they are within 0.5 units and their theta difference is ≤ 30 degrees."""
@@ -534,19 +532,8 @@ class Search:
         self.search_start = start
         self.search_goal = Point(goal.x, goal.y, 0)
         self.nodes_dict.clear()
-        # Action list for 12 grid
-        # each tuple is x y theta cost
-        # A robot can take [-180,180]
-        R3 = 3**0.5
-        # valid_actions = {(STEP, 0, 0, STEP), (1.5 * STEP, (R3 * STEP) / 2, 30, R3 * STEP),
-        #                  (0.5 * STEP, (R3 * STEP) / 2, 60, STEP), (0, R3 * STEP, 90, R3 * STEP),
-        #                  (-0.5 * STEP, (R3 * STEP) / 2, 120, STEP), (-1.5 * STEP, (R3 * STEP) / 2, 150, R3 * STEP),
-        #                  (-STEP, 0, 180, STEP), (1.5 * STEP, -(R3 * STEP) / 2, -30, R3 * STEP),
-        #                  (0.5 * STEP, -(R3 * STEP) / 2, -60, STEP), (0, -R3 * STEP, -90, R3 * STEP),
-        #                  (-0.5 * STEP, -(R3 * STEP) / 2, -120, STEP), (-1.5 * STEP, -(R3 * STEP) / 2, -150, R3 * STEP)}
-
         start_node = Node(start.x, start.y, start.theta, 0)
-        start_node.total_cost = heuristic_cost(start_node.x, start_node.y)
+        start_node.total_cost = heuristic(start, goal)
         valid_actions = [
             sharp_right_R1,
             sharp_left_R1,
@@ -563,45 +550,68 @@ class Search:
         goal_reached = False
         self.nodes_dict = {Point(u.x, u.y, u.theta): u}
 
+        early_exit = False
         while self.queue:
+            if early_exit:
+                break
+
             node: Node = heapq.heappop(self.queue)
             if self.reached_goal(node.x, node.y, goal):
                 self.nodes_dict["last"] = node
                 self.search_last_node = node
                 goal_reached = True
-                print("Path found!")
+                print(f"Goal found at {node}")
                 break
 
-            for action in valid_actions:
+            print(f"Exploring node: {node}")
+            for act_idx, action in enumerate(valid_actions):
                 waypoints, cost = action(node)
 
                 # Check waypoints and endpoint for collisions with the obstacles or the wall
-                collisions = False
-                goalreached = False
-                goalwp:WayPoint = None
-                for wp in waypoints:
+                is_colliding = False
+                is_wp_near_goal = False
+                wp_goal_idx: WayPoint = None
+                for wp_idx, wp in enumerate(waypoints):
                     if (
                         is_inside_buffer(wp.x, wp.y)
                         or is_inside_obstacle(wp.x, wp.y)
                         or not (0 <= wp.x < WIDTH and 0 <= wp.y < HEIGHT)
                     ):
-                        collisions = True
+                        is_colliding = True
                         break
 
-                    # Not colliding, but check for the cornercase where the waypoint itself is the near the Goal 
+                    # Not colliding, but check for the cornercase where the waypoint itself is the near the Goal
                     if self.reached_goal(wp.x, wp.y, goal):
-                        goalreached = True
-                        goalwp = wp
+                        is_wp_near_goal = True
+                        wp_goal_idx = wp_idx
                         break
 
-                if collisions:      # One or more waypoints are colliding, so exclude this action and proceed with the next one
-                    continue
+                if is_colliding:
+                    print(f"Collision detected, discarding action {act_idx}")
+                    continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
 
-                if goalreached:
-                    self.nodes_dict["last"] = Node(goalwp.x, goalwp.y, goalwp.theta, 0)
-                    self.search_last_node = node
+                if is_wp_near_goal:
+                    # The waypoint is near the goal, so add it as a node and proceed
+                    wp_goal: WayPoint = waypoints[wp_goal_idx]
+                    wp_goal_node: Node = Node(
+                        wp_goal.x, wp_goal.y, wp_goal.theta, node.c2c + wp_goal.edgecost
+                    )
+                    wp_goal_node.total_cost = wp_goal_node.c2c + heuristic(
+                        Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta),
+                        self.search_goal,
+                    )
+                    wp_goal_node.visited = True
+                    wp_goal_node.parent = node
+                    wp_goal_node.waypoints = waypoints[:wp_goal_idx]
+                    self.nodes_dict["last"] = wp_goal_node
+                    self.nodes_dict[
+                        Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta)
+                    ] = wp_goal_node
+                    self.search_last_node = wp_goal_node
+                    print(f"Goal found near waypoint at {wp_goal_node}")
+                    early_exit = True
                     goal_reached = True
-                    print("Path found!")
+                    break
 
                 # Check in dictionary if the node exists at the point, else create a new node at the last waypoin
                 next_node = self.nodes_dict.get(
@@ -617,10 +627,9 @@ class Search:
                         0,
                     ),
                 )
-
                 if (next_node.c2c > node.c2c + cost) or not next_node.visited:
-                    next_node.c2c = node.c2c + cost
                     # Updating total cost to ctoc with heuristic, total cost and parent and marking it as visited
+                    next_node.c2c = node.c2c + cost
                     next_node.total_cost = next_node.c2c + heuristic(
                         Point(next_node.x, next_node.y, 0), self.search_goal
                     )
@@ -631,6 +640,7 @@ class Search:
                         Point(next_node.x, next_node.y, next_node.theta)
                     ] = next_node
                     next_node.waypoints = waypoints
+                print(f"New node: {next_node}")
 
         if not goal_reached:
             print("No path found!")
@@ -769,7 +779,7 @@ def main():
 
     print("Creating the map...")
     map = initialize_map()
-    update_map(map)
+    # update_map(map)
 
     startpos = get_start_position()
     start_orientation = get_valid_start_orientation()
