@@ -3,15 +3,16 @@
 import heapq
 import math
 
-# import threading
-# import time
+import threading
+import time
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from math import pi as PI
 from math import sin
 from math import cos
-from math import radians
+from math import radians, degrees, sqrt
+from collections import deque
 
 # A container to hold multiple time values in key: value pair to be used for analysis at the termination of program
 time_dict = {}
@@ -112,8 +113,8 @@ def is_inside_buffer(x, y):
 
     x_left_boundary = 0 <= x < BUFFER
     x_right_boundary = WIDTH - BUFFER <= x < WIDTH
-    y_upper_boundary = 0 <= y < BUFFER
-    y_lower_boundary = HEIGHT - BUFFER <= y < HEIGHT
+    y_lower_boundary = 0 <= y < BUFFER
+    y_upper_boundary = HEIGHT - BUFFER <= y < HEIGHT
 
     return any(
         [
@@ -275,21 +276,21 @@ class Point:
 
     def __hash__(self):
         """Quantize x and y to a 1 mm grid"""
-        quantized_x = round(self.x * 2)
-        quantized_y = round(self.y * 2)
-        return hash((quantized_x, quantized_y))
+        quantized_x = round(self.x / 10) * 10
+        quantized_y = round(self.y / 10) * 10
+        # Quantize theta to bins of 30 degrees
+        quantized_theta = round(self.theta / 10) * 10
+        return hash((quantized_x, quantized_y, quantized_theta))
 
     def __eq__(self, other):
         """Two nodes are considered equal if they are within 0.5 units and their theta difference is ≤ 30 degrees."""
         if isinstance(other, Point):
-            euclidean_distance = math.sqrt(
-                (self.x - other.x) ** 2 + (self.y - other.y) ** 2
-            )
+            euclidean_distance = sqrt((self.x - other.x) ** 2 + (self.y - other.y) ** 2)
             theta_diff = abs(self.theta - other.theta)
             theta_diff = min(
                 theta_diff, 360 - theta_diff
             )  # Normalize to range [0, 180]
-            return euclidean_distance <= 0.5 and theta_diff <= 30
+            return euclidean_distance <= 10 and theta_diff <= 10
         return False
 
     def __str__(self):
@@ -334,10 +335,12 @@ class Node:
 
     # used for duplicate key finding in dict
     def __hash__(self):
-        """Quantize x and y to a 1 mm grid """
-        quantized_x = round(self.x * 2) # Round to nearest integer
-        quantized_y = round(self.y * 2)
-        return hash((quantized_x, quantized_y))
+        """Quantize x and y to a 1 mm grid"""
+        quantized_x = round(self.x / 10) * 10
+        quantized_y = round(self.y / 10) * 10
+        # Quantize theta to bins of 10 degrees
+        quantized_theta = round(self.theta / 10) * 10
+        return hash((quantized_x, quantized_y, quantized_theta))
 
     def __eq__(self, other):
         """Two nodes are considered equal if they are within 0.5 units and their theta difference is ≤ 30 degrees."""
@@ -349,7 +352,7 @@ class Node:
             theta_diff = min(
                 theta_diff, 360 - theta_diff
             )  # Normalize to range [0, 180]
-            return euclidean_distance <= 0.5 and theta_diff <= 30
+            return euclidean_distance <= 10 and theta_diff <= 10
         return False
 
     def __lt__(self, other):
@@ -359,7 +362,7 @@ class Node:
 
     def __str__(self):
         """Utility function to print Node directly"""
-        return f"Node(x={self.x}, y={self.y}, θ={self.theta}, c2c={self.c2c})"
+        return f"Node(x={self.x}, y={self.y}, θ={self.theta}, c2c={self.c2c}, totalcost={self.total_cost})"
 
 
 # Container to store goal
@@ -373,33 +376,17 @@ class GoalPt:
         self.y = y
         self.radius = radius
 
+    def __str__(self):
+        return f"GoalPt(x={self.x}, y={self.y}, radius={self.radius})"
+
 
 # ==========================================================================================
-# Cost to go heuristic using Euclidean distance
-def heuristic_cost(x, y):
-    goal_x, goal_y = goal_node
-    dist = math.sqrt(((goal_x - x) ** 2) + ((goal_y - y) ** 2))
-    return dist
-
-
-# Compute the edge cost based on translational and rotational motion due to the action
-def edge_cost(u_l, u_r):
-    # Translational component of velocity
-    linear_vel = (r / 2) * (u_l + u_r)
-
-    # Rotational component
-    angular_vel = (r / L) * (u_r - u_l)
-
-    # Cost = Translational + Rotational
-    c2c = (linear_vel + abs(angular_vel)) * TIME_STEP
-    return c2c
-
-
 # Function to get the angular velocity from RPM
 def rpm_to_rad_ps(RPM):
     return (2 * PI * RPM) / 60
 
 
+# Obtain the neighboring nodes by computing the edge cost
 def get_waypoints_cost(node: Node, u_l, u_r):
     edgecost = 0
     x_i = node.x
@@ -410,11 +397,12 @@ def get_waypoints_cost(node: Node, u_l, u_r):
         dx = 0.5 * R * (u_l + u_r) * cos(theta_i) * TIME_STEP
         dy = 0.5 * R * (u_l + u_r) * sin(theta_i) * TIME_STEP
         dtheta = (R / L) * (u_r - u_l) * TIME_STEP
-        dcost = (R / 2) * (u_l + u_r) * TIME_STEP
+        # dcost = (R / 2) * (u_l + u_r) * TIME_STEP
+        dcost = math.sqrt(dx**2 + dy**2)
         edgecost += dcost
         x_i += dx
         y_i += dy
-        theta_i += dtheta
+        theta_i = radians(principal_theta(degrees(theta_i) + degrees(dtheta)))
         waypoints.append(WayPoint(x_i, y_i, theta_i, edgecost))
     return waypoints, edgecost
 
@@ -487,6 +475,31 @@ def heuristic(node: Point, goal: Point):
     return math.hypot(goal.x - node.x, goal.y - node.y)
 
 
+class DataQueue:
+    def __init__(self, max_size=100):
+        self.queue = deque()
+        self.max_size = max_size
+        self.lock = threading.Lock()
+
+    def put(self, item):
+        with self.lock:
+            if len(self.queue) == self.max_size:
+                self.queue.popleft()
+            self.queue.append(item)
+
+    def get(self):
+        with self.lock:
+            if self.queue:
+                return self.queue.popleft()
+            return None
+
+    def get_all(self):
+        with self.lock:
+            items = list(self.queue)
+            self.queue.clear()
+            return items
+
+
 class Search:
     """
     Search class encapsulating the A* algorithm.
@@ -516,19 +529,45 @@ class Search:
         else:
             return False
 
+    def plotter(self, dataq: DataQueue, stop_event: threading.Event):
+        plt.ion()
+        fig, ax = plt.subplots()
+        x_data, y_data = [], []
+        (line,) = ax.plot(x_data, y_data, "bo-")  # blue circles with lines
+
+        while not stop_event.is_set():
+            new_data = dataq.get_all()
+            if new_data:
+                x_data.extend([point[0] for point in new_data])
+                y_data.extend([point[1] for point in new_data])
+                line.set_xdata(x_data)
+                line.set_ydata(y_data)
+                ax.relim()
+                ax.autoscale_view()
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+            else:
+                time.sleep(0.1)
+
+        plt.io._destroy()
+        plt.close(fig)
+
     def a_star(self, start: Point, goal: GoalPt):
         """
-        Main function for A* algorithm. All the valid actions are defined here. Robot is considered in a Hex connected grid, and it can go from -180 deg to 180 deg.
-        There are 12 valid actions defined having format dx dy dtheta cost. cost is basically distance to travel and dx dy dtheta is change is position and orientation.
-        The valid actions is scaled as per STEP size input from the user.
+        Main function for A* algorithm. All the valid actions are defined here. The robot is non-holonomic and constitutes of 8 actions given as an differential RPM pair:
+        This includes (RPM1, 0), (0, RPM1), (RPM2, 0), (0, RPM2), (RPM1, RPM2), (RPM2, RPM1), (RPM1, RPM1), (RPM2, RPM2)
         Args:
             start: start point(X,Y,Theta) in graph
             goal: goal region (X,Y,Radius) in graph
-
         Returns: Boolean: True is an optimal path is found, False otherwise
-
         """
         # start_time = time.perf_counter()
+        stop_event = threading.Event()
+        data_queue = DataQueue()
+        self.plotter_thread = threading.Thread(
+            target=self.plotter, args=(data_queue, stop_event)
+        )
+
         self.search_start = start
         self.search_goal = Point(goal.x, goal.y, 0)
         self.nodes_dict.clear()
@@ -544,6 +583,9 @@ class Search:
             gradual_turn_R1R2,
             gradual_turn_R2R1,
         ]
+        print(f"Start:{start_node}")
+        print(f"Goal:{goal}")
+        time.sleep(5)
 
         u = Node(start.x, start.y, start.theta, 0)
         heapq.heappush(self.queue, u)
@@ -551,96 +593,114 @@ class Search:
         self.nodes_dict = {Point(u.x, u.y, u.theta): u}
 
         early_exit = False
-        while self.queue:
-            if early_exit:
-                break
-
-            node: Node = heapq.heappop(self.queue)
-            if self.reached_goal(node.x, node.y, goal):
-                self.nodes_dict["last"] = node
-                self.search_last_node = node
-                goal_reached = True
-                print(f"Goal found at {node}")
-                break
-
-            print(f"Exploring node: {node}")
-            for act_idx, action in enumerate(valid_actions):
-                waypoints, cost = action(node)
-
-                # Check waypoints and endpoint for collisions with the obstacles or the wall
-                is_colliding = False
-                is_wp_near_goal = False
-                wp_goal_idx: WayPoint = None
-                for wp_idx, wp in enumerate(waypoints):
-                    if (
-                        is_inside_buffer(wp.x, wp.y)
-                        or is_inside_obstacle(wp.x, wp.y)
-                        or not (0 <= wp.x < WIDTH and 0 <= wp.y < HEIGHT)
-                    ):
-                        is_colliding = True
-                        break
-
-                    # Not colliding, but check for the cornercase where the waypoint itself is the near the Goal
-                    if self.reached_goal(wp.x, wp.y, goal):
-                        is_wp_near_goal = True
-                        wp_goal_idx = wp_idx
-                        break
-
-                if is_colliding:
-                    print(f"Collision detected, discarding action {act_idx}")
-                    continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
-
-                if is_wp_near_goal:
-                    # The waypoint is near the goal, so add it as a node and proceed
-                    wp_goal: WayPoint = waypoints[wp_goal_idx]
-                    wp_goal_node: Node = Node(
-                        wp_goal.x, wp_goal.y, wp_goal.theta, node.c2c + wp_goal.edgecost
-                    )
-                    wp_goal_node.total_cost = wp_goal_node.c2c + heuristic(
-                        Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta),
-                        self.search_goal,
-                    )
-                    wp_goal_node.visited = True
-                    wp_goal_node.parent = node
-                    wp_goal_node.waypoints = waypoints[:wp_goal_idx]
-                    self.nodes_dict["last"] = wp_goal_node
-                    self.nodes_dict[
-                        Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta)
-                    ] = wp_goal_node
-                    self.search_last_node = wp_goal_node
-                    print(f"Goal found near waypoint at {wp_goal_node}")
-                    early_exit = True
-                    goal_reached = True
+        thread_started = False
+        try:
+            while self.queue:
+                if early_exit:
                     break
 
-                # Check in dictionary if the node exists at the point, else create a new node at the last waypoin
-                next_node = self.nodes_dict.get(
-                    Point(
-                        node.x + waypoints[-1].x,
-                        node.y + waypoints[-1].y,
-                        node.theta + waypoints[-1].theta,
-                    ),
-                    Node(
-                        waypoints[-1].x,
-                        waypoints[-1].y,
-                        waypoints[-1].theta,
-                        0,
-                    ),
-                )
-                if (next_node.c2c > node.c2c + cost) or not next_node.visited:
-                    # Updating total cost to ctoc with heuristic, total cost and parent and marking it as visited
-                    next_node.c2c = node.c2c + cost
-                    next_node.total_cost = next_node.c2c + heuristic(
-                        Point(next_node.x, next_node.y, 0), self.search_goal
+                node: Node = heapq.heappop(self.queue)
+                if self.reached_goal(node.x, node.y, goal):
+                    self.nodes_dict["last"] = node
+                    self.search_last_node = node
+                    goal_reached = True
+                    print(f"Goal found at {node}")
+                    break
+
+                print(f"Exploring node: {node}")
+                if not thread_started:
+                    thread_started = True
+                    self.plotter_thread.start()
+
+                for act_idx, action in enumerate(valid_actions):
+                    waypoints, cost = action(node)
+
+                    # Check waypoints and endpoint for collisions with the obstacles or the wall
+                    is_colliding = False
+                    is_wp_near_goal = False
+                    wp_goal_idx: WayPoint = None
+                    for wp_idx, wp in enumerate(waypoints):
+                        data_queue.put((wp.x, wp.y))
+                        if (
+                            is_inside_buffer(wp.x, wp.y)
+                            or is_inside_obstacle(wp.x, wp.y)
+                            or not (0 <= wp.x < WIDTH and 0 <= wp.y < HEIGHT)
+                        ):
+                            is_colliding = True
+                            break
+
+                        # Not colliding, but check for the cornercase where the waypoint itself is the near the Goal
+                        if self.reached_goal(wp.x, wp.y, goal):
+                            is_wp_near_goal = True
+                            wp_goal_idx = wp_idx
+                            break
+
+                    if is_colliding:
+                        print(f"Collision detected, discarding action {act_idx}")
+                        continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
+
+                    if is_wp_near_goal:
+                        # The waypoint is near the goal, so add it as a node and proceed
+                        wp_goal: WayPoint = waypoints[wp_goal_idx]
+                        wp_goal_node: Node = Node(
+                            wp_goal.x,
+                            wp_goal.y,
+                            wp_goal.theta,
+                            node.c2c + wp_goal.edgecost,
+                        )
+                        wp_goal_node.total_cost = wp_goal_node.c2c + heuristic(
+                            Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta),
+                            self.search_goal,
+                        )
+                        wp_goal_node.visited = True
+                        wp_goal_node.parent = node
+                        wp_goal_node.waypoints = waypoints[:wp_goal_idx]
+                        self.nodes_dict["last"] = wp_goal_node
+                        self.nodes_dict[
+                            Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta)
+                        ] = wp_goal_node
+                        self.search_last_node = wp_goal_node
+                        print(f"Goal found near waypoint at {wp_goal_node}")
+                        early_exit = True
+                        goal_reached = True
+                        break
+
+                    # Check in dictionary if the node exists at the point, else create a new node at the last waypoin
+                    next_node = self.nodes_dict.get(
+                        Point(
+                            node.x + waypoints[-1].x,
+                            node.y + waypoints[-1].y,
+                            node.theta + waypoints[-1].theta,
+                        ),
+                        Node(
+                            waypoints[-1].x,
+                            waypoints[-1].y,
+                            waypoints[-1].theta,
+                            0,
+                        ),
                     )
-                    next_node.visited = True
-                    next_node.parent = node
-                    heapq.heappush(self.queue, next_node)
-                    self.nodes_dict[
-                        Point(next_node.x, next_node.y, next_node.theta)
-                    ] = next_node
-                    next_node.waypoints = waypoints
-                print(f"New node: {next_node}")
+                    if (next_node.c2c > node.c2c + cost) or not next_node.visited:
+                        # Updating total cost to ctoc with heuristic, total cost and parent and marking it as visited
+                        next_node.c2c = node.c2c + cost
+                        next_node.total_cost = next_node.c2c + heuristic(
+                            Point(next_node.x, next_node.y, 0), self.search_goal
+                        )
+                        next_node.visited = True
+                        next_node.parent = node
+                        heapq.heappush(self.queue, next_node)
+                        self.nodes_dict[
+                            Point(next_node.x, next_node.y, next_node.theta)
+                        ] = next_node
+                        next_node.waypoints = waypoints
+                    print(f"New node: {next_node}")
+
+        except KeyboardInterrupt:
+            pass
+
+        finally:
+            stop_event.set()
+            self.plotter_thread.join()
+            print("Program terminated.")
 
         if not goal_reached:
             print("No path found!")
