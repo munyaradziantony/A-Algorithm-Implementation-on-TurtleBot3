@@ -1,7 +1,7 @@
 from math import sqrt
 
-LIN_QUANT = 0.5
-ANG_QUANT = 1
+LIN_QUANT = 200
+ANG_QUANT = 10
 
 
 # Point container class
@@ -48,6 +48,9 @@ class WayPoint(Point):
     def __init__(self, x, y, theta, edgecost):
         super().__init__(x, y, theta)
         self.edgecost = edgecost
+
+    def __str__(self):
+        return f"WayPoint({self.x}, {self.y}, {self.theta}, {self.edgecost})"
 
 
 # Node container class

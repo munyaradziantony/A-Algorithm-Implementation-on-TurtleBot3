@@ -65,6 +65,7 @@ class Search:
 
     def __init__(self, robot, canvas):
         # A container to store nodes in dictionary. The dict to store only unique nodes
+        self.goal_reached = None
         self.nodes_dict = {}
         # A container to store the nodes
         self.queue = []
@@ -73,8 +74,8 @@ class Search:
         self.search_last_node = None
         self.robot: Robot = robot
         self.canvas: Canvas = canvas
-        self.search_start = Point(500, HEIGHT - 300, 90)
-        self.search_goal = GoalPt(5000, HEIGHT - 3000, 50)
+        self.search_start = Point(500, HEIGHT - 300, -90)
+        self.search_goal = GoalPt(5000, HEIGHT - 3000, 150)
 
     def reached_goal(self, x, y, goal: GoalPt):
         """
