@@ -11,6 +11,8 @@ import threading
 from robot import Robot
 from math import hypot
 
+
+DEBUG = False
 # Canvas dimensions
 WIDTH = 5400
 HEIGHT = 3000
@@ -33,8 +35,8 @@ NAVY_BLUE = (42, 27, 13)
 
 BLUE = (255, 0, 0)
 
-
-file = open("logs.txt", "w")
+if DEBUG:
+    file = open("logs.txt", "w")
 
 
 class DataQueue:
@@ -258,8 +260,9 @@ class Search:
                     print(f"Goal found at {node}")
                     break
 
-                print(f"Exploring node: {node}")
-                file.write(f"Exploring node: {node}\n")
+                if DEBUG:
+                    print(f"Exploring node: {node}")
+                    file.write(f"Exploring node: {node}\n")
 
                 for act_idx, action in enumerate(valid_actions):
                     waypoints, cost = action(node)
@@ -284,12 +287,13 @@ class Search:
                             break
 
                     if is_colliding:
-                        print(
-                            f"Collision detected while exploring {node}, discarding action {act_idx}"
-                        )
-                        file.write(
-                            f"Collision detected while exploring {node}, discarding action {act_idx}\n"
-                        )
+                        if DEBUG:
+                            print(
+                                f"Collision detected while exploring {node}, discarding action {act_idx}"
+                            )
+                            file.write(
+                                f"Collision detected while exploring {node}, discarding action {act_idx}\n"
+                            )
                         continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
 
                     if is_wp_near_goal:
@@ -314,7 +318,8 @@ class Search:
                         ] = wp_goal_node
                         self.search_last_node = wp_goal_node
                         print(f"Goal found near waypoint at {wp_goal_node}")
-                        file.write(f"Goal found near waypoint at {wp_goal_node}\n")
+                        if DEBUG:
+                            file.write(f"Goal found near waypoint at {wp_goal_node}\n")
                         early_exit = True
                         self.goal_reached = True
                         break
@@ -346,9 +351,10 @@ class Search:
                             Point(next_node.x, next_node.y, next_node.theta)
                         ] = next_node
                         next_node.waypoints = waypoints
-                        print(f"Added node: {next_node}")
-                        file.write(f"Added node: {next_node}\n")
-                    else:
+                        if DEBUG:
+                            print(f"Added node: {next_node}")
+                            file.write(f"Added node: {next_node}\n")
+                    elif DEBUG:
                         print(
                             f"Discarded node: {next_node} because {next_node.visited == False} and {next_node.c2c > node.c2c + cost}"
                         )
@@ -376,7 +382,7 @@ class Search:
         """
         Backtracks from the goal to the start using the dict
         """
-        # start_time = time.perf_counter()
+        start_time = time.perf_counter()
         path = []
         # Backtracking using the parent in node
         g = self.nodes_dict.pop("last")
@@ -388,7 +394,7 @@ class Search:
         path.append(g)
         path.reverse()
         end_time = time.perf_counter()
-        # time_dict["Backtracking"] = end_time - start_time
+        time_dict["Backtracking"] = end_time - start_time
         self.path: list[Node] = path
 
     def animate_search(self):
@@ -453,18 +459,19 @@ class Search:
 
 if __name__ == "__main__":
     robot = Robot(33, 287)
+    start_time = time.perf_counter()
     canvas = Canvas(WIDTH, HEIGHT, round(2 + robot.r), MULTIPLIER)
+    end_time = time.perf_counter()
+    time_dict["Map generated in "] = end_time - start_time
     search = Search(robot, canvas)
+    start_time = time.perf_counter()
     success = search.a_star()
+    end_time = time.perf_counter()
+    time_dict["ASTAR"] = end_time - start_time
     if success:
         search.backtrack_path()
         search.animate_search()
         print("Search success, path found")
 
-    # algo = str(input("BFS or DIJKSTRA "))
-    # if len(algo) == 0:
-    #     print("Invalid input")
-    # print("Graph search using " + algo)
-    # GraphSearch(c.canvas, algo).visualize()
-    # for time in time_dict:
-    #     print(time, time_dict[time])
+    for time in time_dict:
+        print(time, time_dict[time], "seconds")

@@ -15,8 +15,6 @@ from math import radians, degrees, sqrt
 from collections import deque
 
 
-# A container to hold multiple time values in key: value pair to be used for analysis at the termination of program
-time_dict = {}
 
 # Set the size of the map
 WIDTH, HEIGHT = 5400, 3000
