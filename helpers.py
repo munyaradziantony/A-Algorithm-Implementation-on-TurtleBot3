@@ -77,7 +77,7 @@ class Node:
         self.y = y
         self.theta = principal_theta(theta)
         self.c2c = c2c
-        self.waypoints: list = None
+        self.waypoints: list[WayPoint] = None
         self.total_cost = 0
         self.parent = None
         self.visited = False

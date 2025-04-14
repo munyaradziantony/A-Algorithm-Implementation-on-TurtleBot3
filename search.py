@@ -29,6 +29,10 @@ WHITE = (255, 255, 255)
 RED = (0, 0, 255)
 # explored nodes
 GREEN = (0, 255, 0)
+NAVY_BLUE = (42, 27, 13)
+
+BLUE = (255, 0, 0)
+
 
 file = open("logs.txt", "w")
 
@@ -65,17 +69,91 @@ class Search:
 
     def __init__(self, robot, canvas):
         # A container to store nodes in dictionary. The dict to store only unique nodes
-        self.goal_reached = None
+        self.goal_reached = False
         self.nodes_dict = {}
+        self.path: list[Node] = []
         # A container to store the nodes
         self.queue = []
-        # self.search_goal = None
-        # self.search_start = None
-        self.search_last_node = None
         self.robot: Robot = robot
         self.canvas: Canvas = canvas
-        self.search_start = Point(500, HEIGHT - 300, -90)
-        self.search_goal = GoalPt(5000, HEIGHT - 3000, 150)
+        self.search_start = self.get_start()
+        self.search_goal = self.get_goal()
+        self.search_last_node = None
+        self.robot.RPM1, self.robot.RPM2 = self.get_wheel_rpms()
+        # self.search_start = Point(500, HEIGHT - 300, -90)
+        # self.search_goal = GoalPt(5000, HEIGHT - 3000, 150)
+
+    def get_start(self):
+        print("Enter Start Coordinates (x y):")
+        while True:
+            try:
+                x_s, y_s, theta_s = map(
+                    int,
+                    input(
+                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
+                    ).split(),
+                )
+
+                if not (0 <= x_s < self.canvas.width and 0 <= y_s < self.canvas.height):
+                    print("Coordinates are out of bounds... Try again")
+                    continue
+
+                if self.canvas.is_colliding(x_s, y_s):
+                    print("Start position is colliding... Try again")
+                    continue
+
+                if not (-180 <= theta_s < 180):
+                    print("Orientation is out of bounds... Try again")
+
+                print(
+                    f"Start point validated: Start (x y θ) = ({x_s}, {y_s}, {theta_s})"
+                )
+                return Point(x_s, self.canvas.height - y_s, theta_s)
+
+            except ValueError:
+                print("Error: Enter three numbers separated by a space")
+
+    def get_goal(self):
+        print("Enter Goal Coordinates (x y):")
+        while True:
+            try:
+                x_g, y_g, radius = map(
+                    int,
+                    input(
+                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1})]: "
+                    ).split(),
+                )
+
+                if not (0 <= x_g < self.canvas.width and 0 <= y_g < self.canvas.height):
+                    print("Coordinates are out of bounds... Try again")
+                    continue
+
+                if self.canvas.is_colliding(x_g, y_g):
+                    print("Goal position is colliding... Try again")
+                    continue
+
+                print(f"Goal point validated: Goal (x y R) = ({x_g}, {y_g}, {radius})")
+                return GoalPt(x_g, self.canvas.height - y_g, radius)
+
+            except ValueError:
+                print("Error: Enter three numbers separated by a space")
+
+    def get_wheel_rpms(self):
+        while True:
+            try:
+                RPM1, RPM2 = map(
+                    float,
+                    input(f"Enter Wheel RPMs (RPM1 RPM2) (must be > 0): ").split(),
+                )
+
+                if not (RPM1 > 0 and RPM2 > 0):
+                    print("RPM values cannot be non-positive")
+
+                print(f"Wheel RPMs validated: (RPM1 RPM2) = ({RPM1}, {RPM2})")
+                return (RPM1, RPM2)
+
+            except ValueError:
+                print("Invalid input. Please enter numeric values for RPMs.")
 
     def reached_goal(self, x, y, goal: GoalPt):
         """
@@ -112,12 +190,11 @@ class Search:
                     interpolation=cv2.INTER_AREA,
                 )
                 cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
-            else:
-                time.sleep(0.1)
 
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 break
 
+        cv2.waitKey(0)
         cv2.destroyAllWindows()
 
     def heuristic(self, node: Point, goal: Point):
@@ -144,13 +221,13 @@ class Search:
         # start_time = time.perf_counter()
 
         # Create grid of x, y coordinates
-        stop_event = threading.Event()
-        data_queue = DataQueue()
-        plotter_thread = threading.Thread(
-            target=self.plotter,
-            args=(data_queue, stop_event),
-        )
-        plotter_thread.start()
+        # stop_event = threading.Event()
+        # data_queue = DataQueue()
+        # self.plotter_thread = threading.Thread(
+        #     target=self.plotter,
+        #     args=(data_queue, stop_event),
+        # )
+        # self.plotter_thread.start()
 
         self.nodes_dict.clear()
         start_node = Node(
@@ -192,8 +269,8 @@ class Search:
                     is_wp_near_goal = False
                     wp_goal_idx: WayPoint = None
                     for wp_idx, wp in enumerate(waypoints):
-                        data_queue.put((wp.x, wp.y))
-                        if self.canvas.is_colliding(int(wp.x), int(wp.y)) or not (
+                        # data_queue.put((wp.x, wp.y))
+                        if self.canvas.is_colliding(round(wp.x), round(wp.y)) or not (
                             0 <= wp.x < self.canvas.width
                             and 0 <= wp.y < self.canvas.height
                         ):
@@ -283,8 +360,9 @@ class Search:
             pass
 
         finally:
-            stop_event.set()
-            plotter_thread.join()
+            # stop_event.set()
+            # self.plotter_thread.join()
+            cv2.destroyAllWindows()
             print("Program terminated.")
 
         if not self.goal_reached:
@@ -294,6 +372,84 @@ class Search:
         # time_dict["ASTAR"] = end_time - start_time
         return True
 
+    def backtrack_path(self):
+        """
+        Backtracks from the goal to the start using the dict
+        """
+        # start_time = time.perf_counter()
+        path = []
+        # Backtracking using the parent in node
+        g = self.nodes_dict.pop("last")
+        for _ in iter(int, 1):
+            path.append(g)
+            if g.parent.x == self.search_start.x and g.parent.y == self.search_start.y:
+                break
+            g = g.parent
+        path.append(g)
+        path.reverse()
+        end_time = time.perf_counter()
+        # time_dict["Backtracking"] = end_time - start_time
+        self.path: list[Node] = path
+
+    def animate_search(self):
+        """
+        Visualizes the explored nodes of graph.
+        """
+        if not self.goal_reached:
+            return
+
+        canvas_copy = self.canvas.canvas.copy()
+        cv2.circle(
+            canvas_copy,
+            (round(self.search_start.x), round(self.search_start.y)),
+            15,
+            GREEN,
+            15,
+        )
+        cv2.circle(
+            canvas_copy,
+            (round(self.search_goal.x), round(self.search_goal.y)),
+            self.search_goal.radius,
+            BLUE,
+            5,
+        )
+
+        for point, node in self.nodes_dict.items():
+            for wp in node.waypoints:
+                cv2.circle(canvas_copy, (int(wp.x), int(wp.y)), 5, RED, 5)
+
+            scaled_canvas = cv2.resize(
+                canvas_copy,
+                (
+                    round(self.canvas.width * self.canvas.multiplier),
+                    round(self.canvas.height * self.canvas.multiplier),
+                ),
+                interpolation=cv2.INTER_AREA,
+            )
+            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        for node in self.path:
+            for wp in node.waypoints:
+                cv2.circle(canvas_copy, (round(wp.x), round(wp.y)), 5, NAVY_BLUE, 5)
+
+            scaled_canvas = cv2.resize(
+                canvas_copy,
+                (
+                    round(self.canvas.width * self.canvas.multiplier),
+                    round(self.canvas.height * self.canvas.multiplier),
+                ),
+                interpolation=cv2.INTER_AREA,
+            )
+            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+            time.sleep(0.1)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
 if __name__ == "__main__":
     robot = Robot(33, 287)
@@ -301,7 +457,9 @@ if __name__ == "__main__":
     search = Search(robot, canvas)
     success = search.a_star()
     if success:
-        print("success")
+        search.backtrack_path()
+        search.animate_search()
+        print("Search success, path found")
 
     # algo = str(input("BFS or DIJKSTRA "))
     # if len(algo) == 0:

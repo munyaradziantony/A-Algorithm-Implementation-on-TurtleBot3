@@ -96,7 +96,7 @@ class Robot:
         y_i = ry
         theta_i = radians(ryaw)
 
-        waypoints = []
+        waypoints:list[WayPoint] = []
         for _ in np.arange(0, 1, 0.1):
             dx = 0.5 * self.R * (u_l + u_r) * cos(theta_i) * self.dt
             dy = 0.5 * self.R * (u_l + u_r) * sin(theta_i) * self.dt
