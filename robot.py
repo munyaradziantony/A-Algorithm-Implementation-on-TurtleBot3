@@ -9,8 +9,8 @@ class Robot:
         self.R = wheel_radius
         self.L = robot_radius
         self.r = self.L / 2
-        self.RPM1 = 50
-        self.RPM2 = 100
+        self.RPM1 = 5
+        self.RPM2 = 10
         self.valid_actions = [
             self.sharp_right_R1,
             self.sharp_left_R1,

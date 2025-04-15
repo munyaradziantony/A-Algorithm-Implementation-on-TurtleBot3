@@ -116,7 +116,7 @@ class Search:
                 print("Error: Enter three numbers separated by a space")
 
     def get_goal(self):
-        print("Enter Goal Coordinates (x y):")
+        print("Enter Goal Coordinates (x y R):")
         while True:
             try:
                 x_g, y_g, radius = map(
@@ -133,7 +133,9 @@ class Search:
                 if self.canvas.is_colliding(x_g, y_g):
                     print("Goal position is colliding... Try again")
                     continue
-
+                if radius <= 0:
+                    print("Goal can't be negative or zero ... Try again")
+                    continue
                 print(f"Goal point validated: Goal (x y R) = ({x_g}, {y_g}, {radius})")
                 return GoalPt(x_g, self.canvas.height - y_g, radius)
 
@@ -148,11 +150,12 @@ class Search:
                     input(f"Enter Wheel RPMs (RPM1 RPM2) (must be > 0): ").split(),
                 )
 
-                if not (RPM1 > 0 and RPM2 > 0):
+                if RPM1 <= 0 or RPM2 <= 0:
                     print("RPM values cannot be non-positive")
+                    continue
 
                 print(f"Wheel RPMs validated: (RPM1 RPM2) = ({RPM1}, {RPM2})")
-                return (RPM1, RPM2)
+                return RPM1, RPM2
 
             except ValueError:
                 print("Invalid input. Please enter numeric values for RPMs.")
@@ -199,7 +202,7 @@ class Search:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def heuristic(self, node: Point, goal: Point):
+    def heuristic(self, node: Point, goal):
         """
         Heuristic function for A*. Since C-space is R^2 using Euclidean distance
         Args:
@@ -213,7 +216,7 @@ class Search:
 
     def a_star(self):
         """
-        Main function for A* algorithm. All the valid actions are defined here. The robot is non-holonomic and constitutes of 8 actions given as an differential RPM pair:
+        Main function for A* algorithm. All the valid actions are defined here. The robot is non-holonomic and consists of 8 actions given as an differential RPM pair:
         This includes (RPM1, 0), (0, RPM1), (RPM2, 0), (0, RPM2), (RPM1, RPM2), (RPM2, RPM1), (RPM1, RPM1), (RPM2, RPM2)
         Args:
             start: start point(X,Y,Theta) in graph
@@ -253,6 +256,7 @@ class Search:
                     break
 
                 node: Node = heapq.heappop(self.queue)
+                # TODO do we need this ??
                 if self.reached_goal(node.x, node.y, self.search_goal):
                     self.nodes_dict["last"] = node
                     self.search_last_node = node
@@ -266,11 +270,10 @@ class Search:
 
                 for act_idx, action in enumerate(valid_actions):
                     waypoints, cost = action(node)
-
                     # Check waypoints and endpoint for collisions with the obstacles or the wall
                     is_colliding = False
                     is_wp_near_goal = False
-                    wp_goal_idx: WayPoint = None
+                    wp_goal_idx: int = None
                     for wp_idx, wp in enumerate(waypoints):
                         # data_queue.put((wp.x, wp.y))
                         if self.canvas.is_colliding(round(wp.x), round(wp.y)) or not (
@@ -374,8 +377,6 @@ class Search:
         if not self.goal_reached:
             print(f"No path found! Queue: {self.queue}")
             return False
-        # end_time = time.perf_counter()
-        # time_dict["ASTAR"] = end_time - start_time
         return True
 
     def backtrack_path(self):
