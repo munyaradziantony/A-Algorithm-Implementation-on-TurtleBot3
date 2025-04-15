@@ -78,6 +78,7 @@ install(PROGRAMS
   scripts/helpers.py
   scripts/robot.py
   scripts/search.py
+  scripts/transform.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

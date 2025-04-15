@@ -10,6 +10,7 @@ from helpers import *
 import threading
 from robot import Robot
 from math import hypot
+from transform import *
 
 
 DEBUG = False
@@ -28,9 +29,8 @@ NAVY_BLUE = (42, 27, 13)
 
 BLUE = (255, 0, 0)
 
-
-file = open("logs.txt", "w")
-
+if DEBUG:
+    file = open("logs.txt", "w")
 
 class DataQueue:
     def __init__(self, max_size=100):
@@ -85,54 +85,54 @@ class Search:
                 x_s, y_s, theta_s = map(
                     int,
                     input(
-                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
+                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
                     ).split(),
                 )
 
-                if not (0 <= x_s < self.canvas.width and 0 <= y_s < self.canvas.height):
+                x_map, y_map, theta_map = transform_robot_to_map(x_s, y_s, theta_s)
+
+                if not (0 <= x_map < self.canvas.width and 0 <= y_map < self.canvas.height):
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(
-                    round(x_s), round(self.canvas.height / 2 - y_s)
-                ):
+                if self.canvas.is_colliding(round(x_map), round(y_map)):
                     print("Start position is colliding... Try again")
                     continue
 
-                if not (-180 <= theta_s < 180):
+                if not (-180 <= theta_map < 180):
                     print("Orientation is out of bounds... Try again")
 
                 print(
-                    f"Start point validated: Start (x y θ) = ({x_s}, {y_s}, {theta_s})"
+                    f"Start point validated: Start (x y θ) in map = ({x_map}, {y_map}, {theta_map})"
                 )
-                return Point(x_s, self.canvas.height / 2 - y_s, theta_s)
+                return Point(x_map, y_map, theta_map)
 
             except ValueError:
                 print("Error: Enter three numbers separated by a space")
 
     def get_goal(self):
-        print("Enter Goal Coordinates (x y):")
+        print("Enter Goal Coordinates (x y R):")
         while True:
             try:
                 x_g, y_g, radius = map(
                     int,
                     input(
-                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1})]: "
+                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1})]: "
                     ).split(),
                 )
-
-                if not (0 <= x_g < self.canvas.width and 0 <= y_g < self.canvas.height):
+                x_map, y_map, t = transform_robot_to_map(x_g, y_g, 0)
+                if not (0 <= x_map < self.canvas.width and 0 <= y_map < self.canvas.height):
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(
-                    round(x_g), round(self.canvas.height / 2 - y_g)
-                ):
+                if self.canvas.is_colliding(round(x_map), round(y_map)):
                     print("Goal position is colliding... Try again")
                     continue
-
-                print(f"Goal point validated: Goal (x y R) = ({x_g}, {y_g}, {radius})")
-                return GoalPt(x_g, self.canvas.height / 2 - y_g, radius)
+                if radius <= 0:
+                    print("Goal can't be negative or zero ... Try again")
+                    continue
+                print(f"Goal point validated: Goal (x y R) in map = ({x_map}, {y_map}, {radius})")
+                return GoalPt(x_map, y_map, radius)
 
             except ValueError:
                 print("Error: Enter three numbers separated by a space")
@@ -223,11 +223,11 @@ class Search:
         # Create grid of x, y coordinates
         stop_event = threading.Event()
         data_queue = DataQueue()
-        plotter_thread = threading.Thread(
+        self.plotter_thread = threading.Thread(
             target=self.plotter,
             args=(data_queue, stop_event),
         )
-        plotter_thread.start()
+        self.plotter_thread.start()
 
         self.nodes_dict.clear()
         start_node = Node(
@@ -365,7 +365,7 @@ class Search:
 
         finally:
             stop_event.set()
-            plotter_thread.join()
+            self.plotter_thread.join()
             cv2.destroyAllWindows()
             print("Program terminated.")
 
@@ -415,39 +415,62 @@ class Search:
             BLUE,
             5,
         )
-
+        itr = 0
         for point, node in self.nodes_dict.items():
-            for wp in node.waypoints:
-                cv2.circle(canvas_copy, (int(wp.x), int(wp.y)), 5, RED, 5)
+            if node.waypoints is not None:
+                for wp in node.waypoints:
+                    cv2.circle(canvas_copy, (int(wp.x), int(wp.y)), 5, RED, 5)
+                itr += 1
 
-            scaled_canvas = cv2.resize(
+            if itr % 100 == 0:
+                scaled_canvas = cv2.resize(
                 canvas_copy,
                 (
                     round(self.canvas.width * self.canvas.multiplier),
                     round(self.canvas.height * self.canvas.multiplier),
                 ),
                 interpolation=cv2.INTER_AREA,
-            )
-            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+                )
+                cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
 
+        scaled_canvas = cv2.resize(
+            canvas_copy,
+            (
+                round(self.canvas.width * self.canvas.multiplier),
+                round(self.canvas.height * self.canvas.multiplier),
+            ),
+            interpolation=cv2.INTER_AREA,
+        )
+        cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+
+        itr = 0
         for node in self.path:
             for wp in node.waypoints:
-                cv2.circle(canvas_copy, (round(wp.x), round(wp.y)), 20, NAVY_BLUE, 20)
-
-            scaled_canvas = cv2.resize(
-                canvas_copy,
-                (
-                    round(self.canvas.width * self.canvas.multiplier),
-                    round(self.canvas.height * self.canvas.multiplier),
-                ),
-                interpolation=cv2.INTER_AREA,
-            )
-            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
-            time.sleep(0.1)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-
+                cv2.circle(canvas_copy, (round(wp.x), round(wp.y)), 5, NAVY_BLUE, 5)
+            itr += 1
+            if itr % 2 == 0:
+                scaled_canvas = cv2.resize(
+                    canvas_copy,
+                    (
+                        round(self.canvas.width * self.canvas.multiplier),
+                        round(self.canvas.height * self.canvas.multiplier),
+                    ),
+                    interpolation=cv2.INTER_AREA,
+                )
+                cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+                time.sleep(0.1)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+        scaled_canvas = cv2.resize(
+            canvas_copy,
+            (
+                round(self.canvas.width * self.canvas.multiplier),
+                round(self.canvas.height * self.canvas.multiplier),
+            ),
+            interpolation=cv2.INTER_AREA,
+        )
+        cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
