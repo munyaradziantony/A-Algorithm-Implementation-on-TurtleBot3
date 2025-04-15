@@ -59,7 +59,7 @@ def generate_launch_description():
             "-y",
             y_pose,
             "-z",
-            "5.0",
+            "0.1",
             "-R",
             "0.0",
             "-P",

@@ -23,7 +23,7 @@ from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
-
+# from scripts.transform import transform_map_to_gazebo   
 
 def generate_launch_description():
     # Default setting Model as waffle
@@ -42,6 +42,8 @@ def generate_launch_description():
     x_pose = LaunchConfiguration('x_pose', default='0.0')
     y_pose = LaunchConfiguration('y_pose', default='0.0')
     yaw = LaunchConfiguration('yaw', default='0.0')
+
+    # x_pose, y_pose, yaw = transform_map_to_gazebo(float(x_pose), float(y_pose), float(yaw))
 
     world = os.path.join(
         get_package_share_directory('turtlebot3_project3'),
