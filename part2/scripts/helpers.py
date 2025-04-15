@@ -1,7 +1,7 @@
 from math import sqrt
 
-LIN_QUANT = 100
-ANG_QUANT = 5
+LIN_QUANT = 200
+ANG_QUANT = 10
 
 
 # Point container class
@@ -14,7 +14,7 @@ class Point:
         self.x = x
         self.y = y
         self.theta = principal_theta(theta)
-
+        print(LIN_QUANT,ANG_QUANT,"HIIII")
     def move(self, dx, dy, dtheta):
         self.x += dx
         self.y += dy
