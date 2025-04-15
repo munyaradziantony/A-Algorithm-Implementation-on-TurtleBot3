@@ -73,7 +73,11 @@ install(DIRECTORY include/
 
 # Install python scripts
 install(PROGRAMS 
-  scripts/teleop.py
+  scripts/a_star_path.py
+  scripts/canvas.py
+  scripts/helpers.py
+  scripts/robot.py
+  scripts/search.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

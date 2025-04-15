@@ -23,39 +23,51 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Get the urdf file
-    TURTLEBOT3_MODEL = 'waffle'
-    model_folder = 'turtlebot3_' + TURTLEBOT3_MODEL
+    TURTLEBOT3_MODEL = "waffle"
+    model_folder = "turtlebot3_" + TURTLEBOT3_MODEL
     urdf_path = os.path.join(
-        get_package_share_directory('turtlebot3_project3'),
-        'models',
+        get_package_share_directory("turtlebot3_project3"),
+        "models",
         model_folder,
-        'model.sdf'
+        "model.sdf",
     )
 
     # Launch configuration variables specific to simulation
-    x_pose = LaunchConfiguration('x_pose', default='0.0')
-    y_pose = LaunchConfiguration('y_pose', default='0.0')
+    x_pose = LaunchConfiguration("x_pose", default="0.0")
+    y_pose = LaunchConfiguration("y_pose", default="0.0")
+    yaw = LaunchConfiguration("yaw", default="0.0")
 
     # Declare the launch arguments
     declare_x_position_cmd = DeclareLaunchArgument(
-        'x_pose', default_value='0.0',
-        description='Specify namespace of the robot')
+        "x_pose", default_value="0.0", description="Specify namespace of the robot"
+    )
 
     declare_y_position_cmd = DeclareLaunchArgument(
-        'y_pose', default_value='0.0',
-        description='Specify namespace of the robot')
+        "y_pose", default_value="0.0", description="Specify namespace of the robot"
+    )
 
     start_gazebo_ros_spawner_cmd = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
+        package="gazebo_ros",
+        executable="spawn_entity.py",
         arguments=[
-            '-entity', TURTLEBOT3_MODEL,
-            '-file', urdf_path,
-            '-x', x_pose,
-            '-y', y_pose,
-            '-z', '0.01'
+            "-entity",
+            TURTLEBOT3_MODEL,
+            "-file",
+            urdf_path,
+            "-x",
+            x_pose,
+            "-y",
+            y_pose,
+            "-z",
+            "0.1",
+            "-R",
+            "0.0",
+            "-P",
+            "0.0",
+            "-Y",
+            yaw,
         ],
-        output='screen',
+        output="screen",
     )
 
     ld = LaunchDescription()

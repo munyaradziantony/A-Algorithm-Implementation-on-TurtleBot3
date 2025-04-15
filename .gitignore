@@ -3,3 +3,6 @@
 __pycache__/
 *.txt
 
+part2/build
+part2/install
+part2/log
