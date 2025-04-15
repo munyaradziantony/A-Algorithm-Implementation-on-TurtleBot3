@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 import time
-
 BLACK = (0, 0, 0)
 GREY = (128, 128, 128)
 
@@ -9,7 +8,6 @@ GREY = (128, 128, 128)
 # class to create canvas having obstacle and boundaries
 class Canvas:
     def __init__(self, width, height, buffer=2, multiplier=1):
-        start_time = time.perf_counter()
         self.multiplier = multiplier
         self.width = width
         self.height = height
@@ -21,8 +19,6 @@ class Canvas:
         print("Preparing Canvas")
         self._draw_borders()
         self._draw_obstacles()
-        end_time = time.perf_counter()
-        # time_dict["map creation"] = end_time - start_time
 
     # Function to draw borders on canvas
     def _draw_borders(self):
