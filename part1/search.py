@@ -457,11 +457,32 @@ class Search:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+def get_clearance():
+    """
+    Input validation function for radius and clearance.
+    Returns: valid radius and clearance
+
+    """
+    while True:
+        try:
+            clearance = int(input("Enter robot clearance (in pixels): "))
+            if clearance < 0:
+                print("Warning: Invalid Robot clearance")
+                continue
+            break
+        except ValueError:
+            print("Warning: Robot clearance out of bounds. Using default clearance (5 mm)")
+            clearance = 5
+            break
+
+    return clearance
+
 
 if __name__ == "__main__":
     robot = Robot(33, 287)
+    cleared = get_clearance()
     start_time = time.perf_counter()
-    canvas = Canvas(WIDTH, HEIGHT, round(2 + robot.r), MULTIPLIER)
+    canvas = Canvas(WIDTH, HEIGHT, round(cleared + robot.r), MULTIPLIER)
     end_time = time.perf_counter()
     time_dict["Map generated in "] = end_time - start_time
     search = Search(robot, canvas)
