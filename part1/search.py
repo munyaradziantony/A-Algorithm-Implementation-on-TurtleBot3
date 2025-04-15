@@ -107,7 +107,7 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(int(x_map), int(y_map)):
+                if self.canvas.is_colliding(round(x_map), round(y_map)):
                     print("Start position is colliding... Try again")
                     continue
 
@@ -137,7 +137,7 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(int(x_map), int(y_map)):
+                if self.canvas.is_colliding(round(x_map), round(y_map)):
                     print("Goal position is colliding... Try again")
                     continue
                 if radius <= 0:
