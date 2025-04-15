@@ -93,7 +93,9 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(round(x_s), round(self.canvas.height / 2 - y_s)):
+                if self.canvas.is_colliding(
+                    round(x_s), round(self.canvas.height / 2 - y_s)
+                ):
                     print("Start position is colliding... Try again")
                     continue
 
@@ -123,7 +125,9 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(round(x_g), round(self.canvas.height / 2 - y_g)):
+                if self.canvas.is_colliding(
+                    round(x_g), round(self.canvas.height / 2 - y_g)
+                ):
                     print("Goal position is colliding... Try again")
                     continue
 
@@ -217,13 +221,13 @@ class Search:
         # start_time = time.perf_counter()
 
         # Create grid of x, y coordinates
-        # stop_event = threading.Event()
-        # data_queue = DataQueue()
-        # self.plotter_thread = threading.Thread(
-        #     target=self.plotter,
-        #     args=(data_queue, stop_event),
-        # )
-        # self.plotter_thread.start()
+        stop_event = threading.Event()
+        data_queue = DataQueue()
+        plotter_thread = threading.Thread(
+            target=self.plotter,
+            args=(data_queue, stop_event),
+        )
+        plotter_thread.start()
 
         self.nodes_dict.clear()
         start_node = Node(
@@ -266,7 +270,7 @@ class Search:
                     is_wp_near_goal = False
                     wp_goal_idx: int = None
                     for wp_idx, wp in enumerate(waypoints):
-                        # data_queue.put((wp.x, wp.y))
+                        data_queue.put((wp.x, wp.y))
                         if self.canvas.is_colliding(round(wp.x), round(wp.y)) or not (
                             0 <= wp.x < self.canvas.width
                             and 0 <= wp.y < self.canvas.height
@@ -360,8 +364,8 @@ class Search:
             pass
 
         finally:
-            # stop_event.set()
-            # self.plotter_thread.join()
+            stop_event.set()
+            plotter_thread.join()
             cv2.destroyAllWindows()
             print("Program terminated.")
 
