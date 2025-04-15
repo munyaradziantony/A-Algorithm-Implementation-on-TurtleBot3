@@ -11,6 +11,8 @@ import threading
 from robot import Robot
 from math import hypot
 
+
+DEBUG = False
 # A container to hold multiple time values in key: value pair to be used for analysis at the termination of program
 time_dict = {}
 
@@ -139,11 +141,12 @@ class Search:
                     input(f"Enter Wheel RPMs (RPM1 RPM2) (must be > 0): ").split(),
                 )
 
-                if not (RPM1 > 0 and RPM2 > 0):
+                if RPM1 <= 0 or RPM2 <= 0:
                     print("RPM values cannot be non-positive")
+                    continue
 
                 print(f"Wheel RPMs validated: (RPM1 RPM2) = ({RPM1}, {RPM2})")
-                return (RPM1, RPM2)
+                return RPM1, RPM2
 
             except ValueError:
                 print("Invalid input. Please enter numeric values for RPMs.")
@@ -190,7 +193,7 @@ class Search:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def heuristic(self, node: Point, goal: Point):
+    def heuristic(self, node: Point, goal):
         """
         Heuristic function for A*. Since C-space is R^2 using Euclidean distance
         Args:
@@ -204,7 +207,7 @@ class Search:
 
     def a_star(self):
         """
-        Main function for A* algorithm. All the valid actions are defined here. The robot is non-holonomic and constitutes of 8 actions given as an differential RPM pair:
+        Main function for A* algorithm. All the valid actions are defined here. The robot is non-holonomic and consists of 8 actions given as an differential RPM pair:
         This includes (RPM1, 0), (0, RPM1), (RPM2, 0), (0, RPM2), (RPM1, RPM2), (RPM2, RPM1), (RPM1, RPM1), (RPM2, RPM2)
         Args:
             start: start point(X,Y,Theta) in graph
@@ -214,13 +217,13 @@ class Search:
         # start_time = time.perf_counter()
 
         # Create grid of x, y coordinates
-        stop_event = threading.Event()
-        data_queue = DataQueue()
-        self.plotter_thread = threading.Thread(
-            target=self.plotter,
-            args=(data_queue, stop_event),
-        )
-        self.plotter_thread.start()
+        # stop_event = threading.Event()
+        # data_queue = DataQueue()
+        # self.plotter_thread = threading.Thread(
+        #     target=self.plotter,
+        #     args=(data_queue, stop_event),
+        # )
+        # self.plotter_thread.start()
 
         self.nodes_dict.clear()
         start_node = Node(
@@ -244,6 +247,7 @@ class Search:
                     break
 
                 node: Node = heapq.heappop(self.queue)
+                # TODO do we need this ??
                 if self.reached_goal(node.x, node.y, self.search_goal):
                     self.nodes_dict["last"] = node
                     self.search_last_node = node
@@ -251,16 +255,16 @@ class Search:
                     print(f"Goal found at {node}")
                     break
 
-                print(f"Exploring node: {node}")
-                file.write(f"Exploring node: {node}\n")
+                if DEBUG:
+                    print(f"Exploring node: {node}")
+                    file.write(f"Exploring node: {node}\n")
 
                 for act_idx, action in enumerate(valid_actions):
                     waypoints, cost = action(node)
-
                     # Check waypoints and endpoint for collisions with the obstacles or the wall
                     is_colliding = False
                     is_wp_near_goal = False
-                    wp_goal_idx: WayPoint = None
+                    wp_goal_idx: int = None
                     for wp_idx, wp in enumerate(waypoints):
                         # data_queue.put((wp.x, wp.y))
                         if self.canvas.is_colliding(round(wp.x), round(wp.y)) or not (
@@ -277,12 +281,13 @@ class Search:
                             break
 
                     if is_colliding:
-                        print(
-                            f"Collision detected while exploring {node}, discarding action {act_idx}"
-                        )
-                        file.write(
-                            f"Collision detected while exploring {node}, discarding action {act_idx}\n"
-                        )
+                        if DEBUG:
+                            print(
+                                f"Collision detected while exploring {node}, discarding action {act_idx}"
+                            )
+                            file.write(
+                                f"Collision detected while exploring {node}, discarding action {act_idx}\n"
+                            )
                         continue  # At least one waypoint is colliding, so exclude this action and proceed with the next one
 
                     if is_wp_near_goal:
@@ -307,7 +312,8 @@ class Search:
                         ] = wp_goal_node
                         self.search_last_node = wp_goal_node
                         print(f"Goal found near waypoint at {wp_goal_node}")
-                        file.write(f"Goal found near waypoint at {wp_goal_node}\n")
+                        if DEBUG:
+                            file.write(f"Goal found near waypoint at {wp_goal_node}\n")
                         early_exit = True
                         self.goal_reached = True
                         break
@@ -339,9 +345,10 @@ class Search:
                             Point(next_node.x, next_node.y, next_node.theta)
                         ] = next_node
                         next_node.waypoints = waypoints
-                        print(f"Added node: {next_node}")
-                        file.write(f"Added node: {next_node}\n")
-                    else:
+                        if DEBUG:
+                            print(f"Added node: {next_node}")
+                            file.write(f"Added node: {next_node}\n")
+                    elif DEBUG:
                         print(
                             f"Discarded node: {next_node} because {next_node.visited == False} and {next_node.c2c > node.c2c + cost}"
                         )
@@ -354,22 +361,20 @@ class Search:
 
         finally:
             # stop_event.set()
-            self.plotter_thread.join()
+            # self.plotter_thread.join()
             cv2.destroyAllWindows()
             print("Program terminated.")
 
         if not self.goal_reached:
             print(f"No path found! Queue: {self.queue}")
             return False
-        # end_time = time.perf_counter()
-        # time_dict["ASTAR"] = end_time - start_time
         return True
 
     def backtrack_path(self):
         """
         Backtracks from the goal to the start using the dict
         """
-        # start_time = time.perf_counter()
+        start_time = time.perf_counter()
         path = []
         # Backtracking using the parent in node
         g = self.nodes_dict.pop("last")
@@ -381,7 +386,7 @@ class Search:
         path.append(g)
         path.reverse()
         end_time = time.perf_counter()
-        # time_dict["Backtracking"] = end_time - start_time
+        time_dict["Backtracking"] = end_time - start_time
         self.path: list[Node] = path
 
     def animate_search(self):
