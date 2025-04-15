@@ -91,7 +91,7 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(x_s, self.canvas.height / 2 - y_s):
+                if self.canvas.is_colliding(round(x_s), round(self.canvas.height / 2 - y_s)):
                     print("Start position is colliding... Try again")
                     continue
 
@@ -121,7 +121,7 @@ class Search:
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(x_g, self.canvas.height / 2 - y_g):
+                if self.canvas.is_colliding(round(x_g), round(self.canvas.height / 2 - y_g)):
                     print("Goal position is colliding... Try again")
                     continue
 
