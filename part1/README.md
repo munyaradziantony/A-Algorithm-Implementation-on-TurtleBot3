@@ -23,6 +23,22 @@ This project implements the A* algorithm to navigate a differential drive robot 
 
 ## Project Folder Structure
 
+   proj3p2_anirudh#1_pranav#2_munyaradzi#3/     
+   ├── Part01
+   │   ├── a_star_2d.py          # Python code for A* algorithm in 2D
+   │   └── map.py                # Map generation and obstacle handling (if any)
+   ├── Part02/
+   │   ├── ros_package/          # ROS package for Gazebo simulation
+   │   ├── src/
+   │   │   ├── a_star_gazebo.py  # Python node for Gazebo path planning
+   │   │   └── launch/
+   │   │       └── a_star_gazebo.launch # ROS launch file
+   │   └── CMakeLists.txt        # ROS package build file
+   ├── README.md                 # This file
+   └── simulation_videos/        # Folder containing simulation video links
+      ├── part1_simulation.mp4   # Part 1 simulation video (Gazebo)
+      └── part2_simulation.mp4   # Part 2 simulation video (Falcon)                   
+
 
 ## Installation
 
