@@ -1,9 +1,7 @@
 import numpy as np
 import cv2
-import time
 BLACK = (0, 0, 0)
 GREY = (128, 128, 128)
-
 
 # class to create canvas having obstacle and boundaries
 class Canvas:

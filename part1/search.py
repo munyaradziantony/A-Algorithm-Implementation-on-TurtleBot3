@@ -10,7 +10,7 @@ from helpers import *
 import threading
 from robot import Robot
 from math import hypot
-
+from transform import *
 
 DEBUG = False
 # Canvas dimensions
@@ -38,6 +38,11 @@ BLUE = (255, 0, 0)
 if DEBUG:
     file = open("logs.txt", "w")
 
+def get_search_canvas_height():
+    return HEIGHT
+
+def get_search_canvas_width():
+    return WIDTH
 
 class DataQueue:
     def __init__(self, max_size=100):
@@ -92,25 +97,27 @@ class Search:
                 x_s, y_s, theta_s = map(
                     int,
                     input(
-                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
+                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
                     ).split(),
                 )
 
-                if not (0 <= x_s < self.canvas.width and 0 <= y_s < self.canvas.height):
+                x_map, y_map, theta_map = transform_robot_to_map(x_s, y_s, theta_s)
+
+                if not (0 <= x_map < self.canvas.width and 0 <= y_map < self.canvas.height):
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(x_s, y_s):
+                if self.canvas.is_colliding(int(x_map), int(y_map)):
                     print("Start position is colliding... Try again")
                     continue
 
-                if not (-180 <= theta_s < 180):
+                if not (-180 <= theta_map < 180):
                     print("Orientation is out of bounds... Try again")
 
                 print(
-                    f"Start point validated: Start (x y θ) = ({x_s}, {y_s}, {theta_s})"
+                    f"Start point validated: Start (x y θ) in map = ({x_map}, {y_map}, {theta_map})"
                 )
-                return Point(x_s, self.canvas.height - y_s, theta_s)
+                return Point(x_map, y_map, theta_map)
 
             except ValueError:
                 print("Error: Enter three numbers separated by a space")
@@ -122,22 +129,22 @@ class Search:
                 x_g, y_g, radius = map(
                     int,
                     input(
-                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (0 ≤ y ≤ {self.canvas.height - 1})]: "
+                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1})]: "
                     ).split(),
                 )
-
-                if not (0 <= x_g < self.canvas.width and 0 <= y_g < self.canvas.height):
+                x_map, y_map, t = transform_robot_to_map(x_g, y_g, 0)
+                if not (0 <= x_map < self.canvas.width and 0 <= y_map < self.canvas.height):
                     print("Coordinates are out of bounds... Try again")
                     continue
 
-                if self.canvas.is_colliding(x_g, y_g):
+                if self.canvas.is_colliding(int(x_map), int(y_map)):
                     print("Goal position is colliding... Try again")
                     continue
                 if radius <= 0:
                     print("Goal can't be negative or zero ... Try again")
                     continue
-                print(f"Goal point validated: Goal (x y R) = ({x_g}, {y_g}, {radius})")
-                return GoalPt(x_g, self.canvas.height - y_g, radius)
+                print(f"Goal point validated: Goal (x y R) in map = ({x_map}, {y_map}, {radius})")
+                return GoalPt(x_map, y_map, radius)
 
             except ValueError:
                 print("Error: Enter three numbers separated by a space")
