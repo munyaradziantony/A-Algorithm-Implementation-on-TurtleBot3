@@ -427,40 +427,63 @@ class Search:
             BLUE,
             5,
         )
-
+        itr = 0
         for point, node in self.nodes_dict.items():
-            for wp in node.waypoints:
-                cv2.circle(canvas_copy, (int(wp.x), int(wp.y)), 5, RED, 5)
+            if node.waypoints is not None:
+                for wp in node.waypoints:
+                    cv2.circle(canvas_copy, (int(wp.x), int(wp.y)), 5, RED, 5)
+                itr += 1
 
-            scaled_canvas = cv2.resize(
+            if itr % 100 == 0:
+                scaled_canvas = cv2.resize(
                 canvas_copy,
                 (
                     round(self.canvas.width * self.canvas.multiplier),
                     round(self.canvas.height * self.canvas.multiplier),
                 ),
                 interpolation=cv2.INTER_AREA,
-            )
-            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
+                )
+                cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
 
+        scaled_canvas = cv2.resize(
+            canvas_copy,
+            (
+                round(self.canvas.width * self.canvas.multiplier),
+                round(self.canvas.height * self.canvas.multiplier),
+            ),
+            interpolation=cv2.INTER_AREA,
+        )
+        cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+
+        itr = 0
         for node in self.path:
             for wp in node.waypoints:
                 cv2.circle(canvas_copy, (round(wp.x), round(wp.y)), 5, NAVY_BLUE, 5)
-
-            scaled_canvas = cv2.resize(
-                canvas_copy,
-                (
-                    round(self.canvas.width * self.canvas.multiplier),
-                    round(self.canvas.height * self.canvas.multiplier),
-                ),
-                interpolation=cv2.INTER_AREA,
-            )
-            cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
-            time.sleep(0.1)
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                break
-
+            itr += 1
+            if itr % 2 == 0:
+                scaled_canvas = cv2.resize(
+                    canvas_copy,
+                    (
+                        round(self.canvas.width * self.canvas.multiplier),
+                        round(self.canvas.height * self.canvas.multiplier),
+                    ),
+                    interpolation=cv2.INTER_AREA,
+                )
+                cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
+                time.sleep(0.1)
+                if cv2.waitKey(1) & 0xFF == ord("q"):
+                    break
+        scaled_canvas = cv2.resize(
+            canvas_copy,
+            (
+                round(self.canvas.width * self.canvas.multiplier),
+                round(self.canvas.height * self.canvas.multiplier),
+            ),
+            interpolation=cv2.INTER_AREA,
+        )
+        cv2.imshow(f"Map Scaled {self.canvas.multiplier} times", scaled_canvas)
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 

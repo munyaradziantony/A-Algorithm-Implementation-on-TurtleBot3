@@ -1,6 +1,6 @@
 from math import sqrt
 
-LIN_QUANT = 200
+LIN_QUANT = 100
 ANG_QUANT = 10
 
 
