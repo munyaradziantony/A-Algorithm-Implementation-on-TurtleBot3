@@ -6,6 +6,7 @@ from transform import *
 class Robot:
     def __init__(self, wheel_radius, robot_radius):
         self.dt = 0.1
+        self.T = 1.0
         self.R = wheel_radius
         self.L = robot_radius
         self.r = self.L / 2
@@ -39,7 +40,7 @@ class Robot:
         theta_i = radians(ryaw)
 
         waypoints:list[WayPoint] = []
-        for _ in np.arange(0, 1, 0.1):
+        for _ in np.arange(0, self.T, self.dt):
             dx = 0.5 * self.R * (u_l + u_r) * cos(theta_i) * self.dt
             dy = 0.5 * self.R * (u_l + u_r) * sin(theta_i) * self.dt
             dtheta = (self.R / self.L) * (u_r - u_l) * self.dt
@@ -51,7 +52,7 @@ class Robot:
             tx,ty,tyaw = transform_robot_to_map(x_i, y_i, degrees(theta_i))
 
             waypoints.append(WayPoint(tx,ty,tyaw, edgecost))
-        return waypoints, edgecost
+        return waypoints, edgecost, (u_l, u_r)
 
     def sharp_right_R1(self, node):
         return self.action(

@@ -264,7 +264,7 @@ class Search:
                     file.write(f"Exploring node: {node}\n")
 
                 for act_idx, action in enumerate(valid_actions):
-                    waypoints, cost = action(node)
+                    waypoints, cost, (u_l, u_r) = action(node)
                     # Check waypoints and endpoint for collisions with the obstacles or the wall
                     is_colliding = False
                     is_wp_near_goal = False
@@ -310,6 +310,7 @@ class Search:
                         wp_goal_node.visited = True
                         wp_goal_node.parent = node
                         wp_goal_node.waypoints = waypoints[:wp_goal_idx]
+                        wp_goal_node.actions = (u_l, u_r)
                         self.nodes_dict["last"] = wp_goal_node
                         self.nodes_dict[
                             Point(wp_goal_node.x, wp_goal_node.y, wp_goal_node.theta)
@@ -345,6 +346,7 @@ class Search:
                         next_node.visited = True
                         next_node.parent = node
                         heapq.heappush(self.queue, next_node)
+                        next_node.actions = (u_l, u_r)
                         self.nodes_dict[
                             Point(next_node.x, next_node.y, next_node.theta)
                         ] = next_node

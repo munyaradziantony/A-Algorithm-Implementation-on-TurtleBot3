@@ -1,6 +1,6 @@
 from math import sqrt
 
-LIN_QUANT = 200
+LIN_QUANT = 100
 ANG_QUANT = 10
 
 
@@ -78,6 +78,7 @@ class Node:
         self.theta = principal_theta(theta)
         self.c2c = c2c
         self.waypoints: list[WayPoint] = None
+        self.actions:tuple = None
         self.total_cost = 0
         self.parent = None
         self.visited = False

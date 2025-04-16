@@ -24,6 +24,7 @@ WIDTH = 5400
 HEIGHT = 3000
 MULTIPLIER = 0.25
 
+
 def normalize_angle(angle):
     """Normalize angle to the range (-pi, pi]."""
     while angle > PI:
@@ -31,7 +32,6 @@ def normalize_angle(angle):
     while angle <= -PI:
         angle += 2 * PI
     return angle
-
 
 
 def get_clearance():
@@ -48,11 +48,14 @@ def get_clearance():
                 continue
             break
         except ValueError:
-            print("Warning: Robot clearance out of bounds. Using default clearance (5 mm)")
+            print(
+                "Warning: Robot clearance out of bounds. Using default clearance (5 mm)"
+            )
             clearance = 5
             break
 
     return clearance
+
 
 class A_Star_Path(ROS2Node):
 
@@ -60,45 +63,23 @@ class A_Star_Path(ROS2Node):
         super().__init__("a_star_path")
         self.cmd_vel_pub = self.create_publisher(Twist, "/cmd_vel", 10)
 
-    def normalize_angle(aself,angle):
+    def normalize_angle(aself, angle):
         return (angle + np.pi) % (2 * np.pi) - np.pi
 
-    def compute_velocity_to_target(self,A, B, dt):
-        """
-        A, B: (x, y, theta) - poses in 2D
-        dt: time interval to reach from A to B
+    def compute_velocity_to_target(self, lw_radps, rw_radps, R, L):
+        # Convert RPM to linear velocities
+        v_L = lw_radps * (R / 1000)
+        v_R = rw_radps * (R / 1000)
 
-        Returns:
-            linear velocity v (m/s), angular velocity w (rad/s)
-        """
-        x1, y1, theta1 = A
-        x2, y2, theta2 = B
+        # Compute robot linear and angular velocities
+        v = (v_R + v_L) / 2
+        omega = (v_R - v_L) / (L / 1000)
 
-        # Step 1: Relative position in world frame
-        dx = x2 - x1
-        dy = y2 - y1
-        dtheta = normalize_angle(theta2 - theta1)
-
-        # Step 2: Transform dx, dy into A's frame
-        # So motion is expressed as if robot is at origin facing theta1
-        dx_robot = np.cos(-theta1) * dx - np.sin(-theta1) * dy
-        dy_robot = np.sin(-theta1) * dx + np.cos(-theta1) * dy
-
-        # Step 3: Compute linear and angular velocities
-        v = np.hypot(dx_robot, dy_robot) / dt
-        angle_to_target = np.arctan2(dy_robot, dx_robot)
-        angular_offset = normalize_angle(angle_to_target)  # relative to robot forward
-
-        # Adjust linear velocity direction based on angular offset
-        v_forward = v * np.cos(angular_offset)
-        # v_forward = v
-        w = dtheta / dt
-        return v_forward, w
-
+        return v, omega
 
     def run_search(self):
         # Create the Robot object
-        robot = Robot(33, 287)
+        robot = Robot(33, 143.5)
 
         # Prepare the canvas
         cleared = get_clearance()
@@ -111,20 +92,16 @@ class A_Star_Path(ROS2Node):
             print("Path found!")
             search.backtrack_path()
             velocity_message = Twist()
-            dt = robot.dt
 
             for node in search.path:
                 # Publish the twist message
-                last_waypoint: WayPoint = None
-
-                for i in range(len(node.waypoints) - 1):
-                    x0, y0, theta0 = transform_map_to_robot(node.waypoints[i].x, node.waypoints[i].y, node.waypoints[i].theta)
-                    x1, y1, theta1 = transform_map_to_robot(node.waypoints[i + 1].x, node.waypoints[i + 1].y, node.waypoints[i + 1].theta)
-                    v,w = self.compute_velocity_to_target((x0/1000, y0/1000, radians(theta0)),( x1/1000, y1/1000, radians(theta1)),0.1)
-                    velocity_message.linear.x = v
-                    velocity_message.angular.z = w
-                    self.cmd_vel_pub.publish(velocity_message)
-                    time.sleep(dt)
+                velocity_message.linear.x, velocity_message.angular.z = (
+                    self.compute_velocity_to_target(
+                        node.actions[0], node.actions[1], robot.R, robot.L
+                    )
+                )
+                self.cmd_vel_pub.publish(velocity_message)
+                time.sleep(robot.T)
 
             velocity_message.linear.x = 0.0
             velocity_message.angular.z = 0.0
