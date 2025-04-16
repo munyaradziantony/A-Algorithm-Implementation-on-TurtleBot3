@@ -42,7 +42,7 @@ def get_clearance():
     """
     while True:
         try:
-            clearance = int(input("Enter robot clearance (in pixels): "))
+            clearance = int(input("Enter robot clearance (in mm): "))
             if clearance < 0:
                 print("Warning: Invalid Robot clearance")
                 continue
@@ -91,6 +91,7 @@ class A_Star_Path(ROS2Node):
 
         # Adjust linear velocity direction based on angular offset
         v_forward = v * np.cos(angular_offset)
+        # v_forward = v
         w = dtheta / dt
         return v_forward, w
 

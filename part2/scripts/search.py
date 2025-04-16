@@ -85,7 +85,7 @@ class Search:
                 x_s, y_s, theta_s = map(
                     int,
                     input(
-                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1}), (-180 ≤ θ < 180)]: "
+                        f"Start (x y θ) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height/2 - 1}), (-180 ≤ θ < 180)]: "
                     ).split(),
                 )
 
@@ -117,7 +117,7 @@ class Search:
                 x_g, y_g, radius = map(
                     int,
                     input(
-                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height - 1})]: "
+                        f"Goal (x y R) [Note: (0 ≤ x ≤ {self.canvas.width - 1}), (-1499 ≤ y ≤ {self.canvas.height/2 - 1})]: "
                     ).split(),
                 )
                 x_map, y_map, t = transform_robot_to_map(x_g, y_g, 0)

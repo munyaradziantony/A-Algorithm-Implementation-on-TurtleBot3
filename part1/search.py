@@ -495,7 +495,7 @@ def get_clearance():
     """
     while True:
         try:
-            clearance = int(input("Enter robot clearance (in pixels): "))
+            clearance = int(input("Enter robot clearance (in mm): "))
             if clearance < 0:
                 print("Warning: Invalid Robot clearance")
                 continue
